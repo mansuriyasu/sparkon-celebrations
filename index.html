@@ -1,0 +1,46 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>SparkOn Student Celebrations</title><style>
+body{font-family:Arial,sans-serif;margin:0;background:#f4f5f7;color:#222}
+header{background:#0b3d91;color:#fff;padding:16px 20px}h1{margin:0;font-size:22px}
+.bar{padding:12px 20px}input{padding:8px;width:260px;border:1px solid #ccc;border-radius:6px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;padding:0 20px 30px}
+.card{background:#fff;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.12);overflow:hidden}
+.card img{width:100%;height:220px;object-fit:cover;background:#ddd;display:block}
+.info{padding:12px}.info b{font-size:17px}.row{font-size:14px;margin:3px 0}
+.btns{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+button{background:#0b3d91;color:#fff;border:0;border-radius:6px;padding:7px 10px;cursor:pointer;font-size:13px}
+button:disabled{background:#999}.tag{display:inline-block;background:#e6f4ea;color:#137333;border-radius:4px;padding:1px 6px;font-size:12px}
+</style></head><body>
+<header><h1>SparkOn Driving Academy: Student Celebrations</h1><div>Students who passed their road test. Download photos to create the Instagram post.</div></header>
+<div class="bar"><input id="q" placeholder="Search name, class or location" oninput="render()"> <span id="count"></span></div>
+<div class="grid" id="grid">Loading...</div>
+<script>
+var API='https://script.google.com/macros/s/AKfycbwEcC9lVmlbeuV4YEcMWjHC77Pz2B8osjkajSteYwaYRJeKvhSEAfwxjOCWp8UWn_MkvA/exec';var DATA=[];
+function api(q){return fetch(API+'?'+q,{credentials:'omit'}).then(function(r){return r.json()}).then(function(d){if(d&&d.error)throw new Error(d.error);return d})}
+function esc(s){return String(s||'').replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function render(){
+  var q=document.getElementById('q').value.toLowerCase(),g=document.getElementById('grid'),h='',n=0;
+  DATA.forEach(function(s,i){
+    var t=[s.name,s.cls,s.loc,s.num].join(' ').toLowerCase(); if(q&&t.indexOf(q)<0)return; n++;
+    h+='<div class="card"><img id="img'+i+'" alt="Student photo"><div class="info"><b>'+esc(s.name||('Student '+s.num))+'</b> '+
+      (s.status?'<span class="tag">'+esc(s.status)+'</span>':'')+
+      '<div class="row">Class: '+esc(s.cls||'-')+'</div><div class="row">Location: '+esc(s.loc||'-')+'</div>'+
+      '<div class="row">First attempt: '+esc(s.first||'-')+'</div><div class="row">Passed: '+esc(s.date)+'</div><div class="btns">';
+    s.files.forEach(function(f,k){h+='<button onclick="dl(this,\''+f.id+'\')">Download '+(f.type=='video'?'video':'photo')+' '+(k+1)+'</button>'});
+    h+='</div></div></div>';
+  });
+  g.innerHTML=h||'No students found.';document.getElementById('count').textContent=n+' students';
+  DATA.forEach(function(s,i){var el=document.getElementById('img'+i);if(!el||!s.cover)return;
+    if(s.thumb){el.src=s.thumb;return}
+    api('action=thumb&id='+encodeURIComponent(s.cover)).then(function(r){var u=r.url;s.thumb=u;var e=document.getElementById('img'+i);if(e)e.src=u})});
+}
+function dl(btn,id){
+  var old=btn.textContent;btn.disabled=true;btn.textContent='Preparing...';
+  api('action=file&id='+encodeURIComponent(id)).then(function(f){
+    var bin=atob(f.b64),a=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++)a[i]=bin.charCodeAt(i);
+    var url=URL.createObjectURL(new Blob([a],{type:f.mime})),l=document.createElement('a');
+    l.href=url;l.download=f.name;document.body.appendChild(l);l.click();l.remove();
+    btn.disabled=false;btn.textContent=old;
+  }).catch(function(e){alert('Download failed: '+e.message);btn.disabled=false;btn.textContent=old});
+}
+api('action=data').then(function(d){DATA=d;render()}).catch(function(e){document.getElementById('grid').textContent='Could not load: '+e.message});
+</script></body></html>
