@@ -9,10 +9,12 @@ header{background:#0b3d91;color:#fff;padding:16px 20px}h1{margin:0;font-size:22p
 .btns{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
 button{background:#0b3d91;color:#fff;border:0;border-radius:6px;padding:7px 10px;cursor:pointer;font-size:13px}
 button:disabled{background:#999}.tag{display:inline-block;background:#e6f4ea;color:#137333;border-radius:4px;padding:1px 6px;font-size:12px}
+#ed{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);align-items:center;justify-content:center;z-index:9}
+.m{background:#fff;border-radius:10px;padding:18px;width:300px;max-width:90%}.m label{display:block;margin:8px 0;font-size:14px}.m input,.m select{display:block;width:100%;box-sizing:border-box;padding:8px;margin-top:3px;border:1px solid #ccc;border-radius:6px}
 </style></head><body>
 <header><h1>SparkOn Driving Academy: Student Celebrations</h1><div>Students who passed their road test. Download photos to create the Instagram post.</div></header>
 <div class="bar"><input id="q" placeholder="Search name, class or location" oninput="render()"> <span id="count"></span></div>
-<div class="grid" id="grid">Loading...</div>
+<div id="ed"></div><div class="grid" id="grid">Loading...</div>
 <script>
 var API='https://script.google.com/macros/s/AKfycbwEcC9lVmlbeuV4YEcMWjHC77Pz2B8osjkajSteYwaYRJeKvhSEAfwxjOCWp8UWn_MkvA/exec';var DATA=[];
 function api(q){return fetch(API+'?'+q,{credentials:'omit'}).then(function(r){return r.json()}).then(function(d){if(d&&d.error)throw new Error(d.error);return d})}
@@ -25,6 +27,7 @@ function render(){
       (s.status?'<span class="tag">'+esc(s.status)+'</span>':'')+
       '<div class="row">Class: '+esc(s.cls||'-')+'</div><div class="row">Location: '+esc(s.loc||'-')+'</div>'+
       '<div class="row">First attempt: '+esc(s.first||'-')+'</div><div class="row">Passed: '+esc(s.date)+'</div><div class="btns">';
+    h+='<button style="background:#137333" onclick="edit('+i+')">Edit details</button>';
     s.files.forEach(function(f,k){h+='<button onclick="dl(this,\''+f.id+'\')">Download '+(f.type=='video'?'video':'photo')+' '+(k+1)+'</button>'});
     h+='</div></div></div>';
   });
@@ -33,6 +36,19 @@ function render(){
     if(s.thumb){el.src=s.thumb;return}
     api('action=thumb&id='+encodeURIComponent(s.cover)).then(function(r){var u=r.url;s.thumb=u;var e=document.getElementById('img'+i);if(e)e.src=u})});
 }
+function edit(i){var s=DATA[i],box=document.getElementById('ed');
+  box.innerHTML='<div class="m"><h3>Edit Student '+esc(s.num)+'</h3>'+
+  '<label>Name<input id="e_name" value="'+esc(s.name)+'"></label>'+
+  '<label>Class<select id="e_cls"><option value="">-</option><option>G2</option><option>G</option></select></label>'+
+  '<label>Location<input id="e_loc" value="'+esc(s.loc)+'"></label>'+
+  '<label>First attempt<select id="e_first"><option value="">-</option><option>Yes</option><option>No</option></select></label>'+
+  '<div class="btns"><button id="e_save" onclick="saveEd('+i+')">Save</button><button style="background:#888" onclick="document.getElementById(\'ed\').style.display=\'none\'">Cancel</button></div></div>';
+  document.getElementById('e_cls').value=s.cls||'';document.getElementById('e_first').value=s.first||'';box.style.display='flex';}
+function saveEd(i){var s=DATA[i],b=document.getElementById('e_save');b.disabled=true;b.textContent='Saving...';
+  var v={name:document.getElementById('e_name').value.trim(),cls:document.getElementById('e_cls').value,loc:document.getElementById('e_loc').value.trim(),first:document.getElementById('e_first').value};
+  api('action=save&num='+encodeURIComponent(s.num)+'&name='+encodeURIComponent(v.name)+'&cls='+encodeURIComponent(v.cls)+'&loc='+encodeURIComponent(v.loc)+'&first='+encodeURIComponent(v.first)).then(function(){
+    s.name=v.name;s.cls=v.cls;s.loc=v.loc;s.first=v.first;document.getElementById('ed').style.display='none';render();
+  }).catch(function(e){alert('Save failed: '+e.message);b.disabled=false;b.textContent='Save'});}
 function dl(btn,id){
   var old=btn.textContent;btn.disabled=true;btn.textContent='Preparing...';
   api('action=file&id='+encodeURIComponent(id)).then(function(f){
